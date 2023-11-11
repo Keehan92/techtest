@@ -6,6 +6,8 @@ import com.example.techtest.repository.TradingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class TradingService {
 
@@ -16,8 +18,8 @@ public class TradingService {
         this.tradingRepository = tradingRepository;
     }
 
-    public Trading getTradingHistory() {
-        return tradingRepository.findFirstByOrderByTimestampDesc();
+    public List<Trading> getTradingHistory() {
+        return tradingRepository.findAllByOrderByTimestampDesc();
     }
 
     public boolean saveTransactionRecord(String pairType, String tradeType, int userId, double fiatAmount, double cryptoAmount, double cryptoPrice) {

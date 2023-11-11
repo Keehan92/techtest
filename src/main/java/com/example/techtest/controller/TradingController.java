@@ -1,9 +1,9 @@
 package com.example.techtest.controller;
 
-import com.example.techtest.entity.Pricing;
 import com.example.techtest.entity.Trading;
 import com.example.techtest.service.PricingService;
 import com.example.techtest.service.TradingService;
+import com.example.techtest.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,90 +12,132 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 public class TradingController {
 
     private final TradingService tradingService;
     private final PricingService pricingService;
+    private final UserService userService;
 
     @Autowired
-    public TradingController(TradingService tradingService, PricingService pricingService) {
+    public TradingController(TradingService tradingService, PricingService pricingService,UserService userService) {
         this.tradingService = tradingService;
         this.pricingService = pricingService;
+        this.userService = userService;
     }
 
-//    @PostMapping("/buy")
-//    public Trading createTrade(@RequestBody Pricing pricing) {
-//        return pricingService.savePrice(pricing);
-//    }
-    @PostMapping("/buy")
-    public ResponseEntity<BooleanResponse> printParams(@RequestBody YourRequest request) {
-        // Save the input parameters to the database
-        String pairType = request.getParam1();
-        System.out.println("pairType " +pairType);
-        String cryptoAmountString = request.getParam2();
-        String tradeType = request.getParam3();
-        double fiatAmount = 0;
-        double cryptoPrice = pricingService.getLatestPriceByPairTypeAndTradeType(pairType,tradeType);
-        double cryptoAmount = Double.parseDouble(cryptoAmountString);
-        double totalPrice = calculateTotalPrice(pairType, tradeType, cryptoAmount);
+    @PostMapping("/trade")
+    public ResponseEntity<BooleanResponse> executeTrade(@RequestBody TradeRequest request) {
+        String pairType = request.getPairType();
+        double cryptoAmount = request.getAmount();
+        String tradeType = request.getTradeType();
         int userId = 1;
-        boolean result = tradingService.saveTransactionRecord(pairType, tradeType,userId, totalPrice, cryptoAmount, cryptoPrice);
 
-        // Create a response object
-        BooleanResponse response = new BooleanResponse(result);
+        double fiatBalance = userService.getUserFiatBalance(userId);
+        double ethBalance = userService.getUserEthBalance(userId);
+        double btcBalance = userService.getUserBtcBalance(userId);
 
-        // Return a ResponseEntity with the response object and HTTP status
+        double cryptoPrice = pricingService.getLatestPriceByPairTypeAndTradeType(pairType, tradeType);
+        double totalPrice = calculateTotalPrice(pairType, tradeType, cryptoAmount);
+
+        double userCurrentBalance = fiatBalance;
+        double userCurrentEthBalance = ethBalance;
+        double userCurrentBtcBalance = btcBalance;
+
+        if (tradeType.equals("B")) {
+            boolean isAllowedToBuy = isValidBalanceFiat(userCurrentBalance, totalPrice);
+            if (!isAllowedToBuy) {
+                return new ResponseEntity<>(new BooleanResponse(false, "Invalid Fiat Balance"), HttpStatus.OK);
+            } else {
+                fiatBalance -= totalPrice;
+
+                if (pairType.equals("BTC")) {
+                    btcBalance += cryptoAmount;
+                } else {
+                    ethBalance += cryptoAmount;
+                }
+            }
+        } else {
+            if (pairType.equals("BTC")) {
+                boolean isAllowedToSell = isValidBalanceCrypto(userCurrentBtcBalance, cryptoAmount);
+                if (!isAllowedToSell) {
+                    return new ResponseEntity<>(new BooleanResponse(false, "Invalid BTC Balance"), HttpStatus.OK);
+                } else {
+                    fiatBalance += totalPrice;
+                    btcBalance -= cryptoAmount;
+                }
+            } else {
+                boolean isAllowedToSell = isValidBalanceCrypto(userCurrentEthBalance, cryptoAmount);
+                if (!isAllowedToSell) {
+                    return new ResponseEntity<>(new BooleanResponse(false, "Invalid ETH Balance"), HttpStatus.OK);
+                } else {
+                    fiatBalance += totalPrice;
+                    ethBalance -= cryptoAmount;
+                }
+            }
+        }
+
+        boolean result = tradingService.saveTransactionRecord(pairType, tradeType, userId, totalPrice, cryptoAmount, cryptoPrice);
+        boolean updateUserBalanceStatus = userService.updateUserWallet(userId, fiatBalance, ethBalance, btcBalance);
+        System.out.println("updateUserBalanceStatus " +updateUserBalanceStatus);//log down to check incase of error
+        BooleanResponse response = new BooleanResponse(result, "");
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/history")
-    public Trading getTrading() {
+    public List<Trading> getTrading() {
         return tradingService.getTradingHistory();
     }
 
     // Request DTO
-    public static class YourRequest {
-        private String param1;
-        private String param2;
-        private String param3;
+    public static class TradeRequest {
+        private String pairType;
+        private double amount;
+        private String tradeType;
 
-        public String getParam1() {
-            return param1;
+        public String getPairType() {
+            return pairType;
         }
 
-        public void setParam1(String param1) {
-            this.param1 = param1;
+        public void setPairType(String pairType) {
+            this.pairType = pairType;
         }
 
-        public String getParam2() {
-            return param2;
+        public double getAmount() {
+            return amount;
         }
 
-        public void setParam2(String param2) {
-            this.param2 = param2;
+        public void setAmount(double amount) {
+            this.amount = amount;
         }
 
-        public String getParam3() {
-            return param3;
+        public String getTradeType() {
+            return tradeType;
         }
 
-        public void setParam3(String param3) {
-            this.param3 = param3;
+        public void setTradeType(String tradeType) {
+            this.tradeType = tradeType;
         }
     }
 
     // Response DTO
     public static class BooleanResponse {
         private final boolean result;
-
-        public BooleanResponse(boolean result) {
-            this.result = result;
+        private final String errorMsg;
+        public BooleanResponse(boolean result, String errorMsg) {
+            this.result = result; this.errorMsg = errorMsg;
         }
 
         public boolean isResult() {
             return result;
         }
+
+        public String getErrorMsg() {
+            return errorMsg;
+        }
+
     }
 
     public double calculateTotalPrice(String pairType,String tradeType, double cryptoAmount){
@@ -103,6 +145,24 @@ public class TradingController {
         System.out.println(("Best "+tradeType + " " +pairType +" = " + cryptoPrice));
         System.out.println(("Total Price  = " + cryptoPrice*cryptoAmount));
         return cryptoPrice*cryptoAmount;
+    }
+
+    public boolean isValidBalanceFiat(double currentBalance, double totalPrice){
+        boolean status = false;
+
+        if(currentBalance >= totalPrice){
+            status = true;
+        }
+        return status;
+    }
+
+    public boolean isValidBalanceCrypto(double currentAmount, double sellingAmount){
+        boolean status = false;
+
+        if(currentAmount >= sellingAmount){
+            status = true;
+        }
+        return status;
     }
 
 }

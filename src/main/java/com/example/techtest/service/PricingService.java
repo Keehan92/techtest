@@ -26,8 +26,7 @@ public class PricingService {
     }
 
     public double getLatestPriceByPairTypeAndTradeType(String pairType, String tradeType) {
-        // Implement your custom query logic
-        // This is just an example, you should adjust it based on your specific criteria
+
         Pricing pricing = pricingRepository.findFirstByOrderByTimestampDesc();
         if(pairType.equals("BTC") && tradeType.equals("B")){
             return pricing.getBtcUsdtBuyPrice();
