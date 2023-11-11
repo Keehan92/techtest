@@ -20,4 +20,8 @@ public class PricingService {
     public Pricing savePrice(Pricing price) {
         return pricingRepository.save(price);
     }
+
+    public Pricing getLatestPrice() {
+        return pricingRepository.findFirstByOrderByTimestampDesc();
+    }
 }
