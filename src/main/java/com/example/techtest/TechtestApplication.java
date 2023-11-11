@@ -16,8 +16,9 @@ public class TechtestApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(TechtestApplication.class, args);
+
     }
-    
+
 }
 
 
