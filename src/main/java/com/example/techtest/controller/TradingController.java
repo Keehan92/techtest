@@ -4,9 +4,14 @@ import com.example.techtest.entity.Trading;
 import com.example.techtest.service.PricingService;
 import com.example.techtest.service.TradingService;
 import com.example.techtest.service.UserService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -29,7 +34,12 @@ public class TradingController {
     }
 
     @PostMapping("/trade")
-    public ResponseEntity<BooleanResponse> executeTrade(@RequestBody TradeRequest request) {
+    @Validated
+    public ResponseEntity<BooleanResponse> executeTrade(@RequestBody @Valid TradeRequest request, BindingResult result) {
+        if (result.hasErrors()) {
+            // Handle validation errors
+            return ResponseEntity.badRequest().body(new BooleanResponse(false, "Validation error"));
+        }
         String pairType = request.getPairType();
         double cryptoAmount = request.getAmount();
         String tradeType = request.getTradeType();
@@ -79,10 +89,10 @@ public class TradingController {
             }
         }
 
-        boolean result = tradingService.saveTransactionRecord(pairType, tradeType, userId, totalPrice, cryptoAmount, cryptoPrice);
+        boolean saveRecordResult = tradingService.saveTransactionRecord(pairType, tradeType, userId, totalPrice, cryptoAmount, cryptoPrice);
         boolean updateUserBalanceStatus = userService.updateUserWallet(userId, fiatBalance, ethBalance, btcBalance);
         System.out.println("updateUserBalanceStatus " +updateUserBalanceStatus);//log down to check incase of error
-        BooleanResponse response = new BooleanResponse(result, "");
+        BooleanResponse response = new BooleanResponse(saveRecordResult, "");
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -93,8 +103,13 @@ public class TradingController {
 
     // Request DTO
     public static class TradeRequest {
+        @NotBlank(message = "pairType is required")
         private String pairType;
+
+        @NotNull(message = "amount is required")
         private double amount;
+
+        @NotBlank(message = "tradeType is required")
         private String tradeType;
 
         public String getPairType() {
@@ -141,6 +156,7 @@ public class TradingController {
     }
 
     public double calculateTotalPrice(String pairType,String tradeType, double cryptoAmount){
+        //calcalate total USDT needed to purchase that amount of crypto
         double cryptoPrice = pricingService.getLatestPriceByPairTypeAndTradeType(pairType,tradeType);
         System.out.println(("Best "+tradeType + " " +pairType +" = " + cryptoPrice));
         System.out.println(("Total Price  = " + cryptoPrice*cryptoAmount));
@@ -148,6 +164,7 @@ public class TradingController {
     }
 
     public boolean isValidBalanceFiat(double currentBalance, double totalPrice){
+        //check if user have valid amount of USDT to buy
         boolean status = false;
 
         if(currentBalance >= totalPrice){
@@ -157,6 +174,7 @@ public class TradingController {
     }
 
     public boolean isValidBalanceCrypto(double currentAmount, double sellingAmount){
+        //check if user have valid amount of crypto to sell
         boolean status = false;
 
         if(currentAmount >= sellingAmount){

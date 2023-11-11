@@ -18,11 +18,6 @@ public class PricingController {
         this.pricingService = pricingService;
     }
 
-    @PostMapping("/createprice")
-    public Pricing createPrice(@RequestBody Pricing pricing) {
-        return pricingService.savePrice(pricing);
-    }
-
     @GetMapping("/price")
     public Pricing getPrice() {
         return pricingService.getLatestPrice();

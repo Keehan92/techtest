@@ -14,7 +14,7 @@ public class Account {
 
     private String name;
 
-    private double fiatBalance;
+    private double usdtBalance;
 
     private double btcBalance;
 
@@ -36,12 +36,12 @@ public class Account {
         this.name = name;
     }
 
-    public double getFiatBalance() {
-        return fiatBalance;
+    public double getUsdtBalance() {
+        return usdtBalance;
     }
 
-    public void setFiatBalance(double fiatBalance) {
-        this.fiatBalance = fiatBalance;
+    public void setUsdtBalance(double usdtBalance) {
+        this.usdtBalance = usdtBalance;
     }
 
     public double getBtcBalance() {

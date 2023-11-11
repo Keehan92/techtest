@@ -6,6 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+import java.util.function.Function;
+
 @Service
 public class PricingService {
 
@@ -26,20 +29,18 @@ public class PricingService {
     }
 
     public double getLatestPriceByPairTypeAndTradeType(String pairType, String tradeType) {
-
+        //getLatestPriceByPairTypeAndTradeType
         Pricing pricing = pricingRepository.findFirstByOrderByTimestampDesc();
-        if(pairType.equals("BTC") && tradeType.equals("B")){
-            return pricing.getBtcUsdtBuyPrice();
-        }
-        if(pairType.equals("BTC") && tradeType.equals("S")){
-            return pricing.getBtcUsdtSellPrice();
-        }
-        if(pairType.equals("ETH") && tradeType.equals("B")){
-            return pricing.getEthUsdtBuyPrice();
-        }
-        if(pairType.equals("ETH") && tradeType.equals("S")){
-            return pricing.getEthUsdtSellPrice();
-        }
-        return 0;
-   }
+
+        Map<String, Function<Pricing, Double>> priceMapping = Map.of(
+                "BTCB", Pricing::getBtcUsdtBuyPrice,
+                "BTCS", Pricing::getBtcUsdtSellPrice,
+                "ETHB", Pricing::getEthUsdtBuyPrice,
+                "ETHS", Pricing::getEthUsdtSellPrice
+        );
+
+        String key = pairType + tradeType;
+        return priceMapping.getOrDefault(key, p -> 0.0).apply(pricing);
+    }
+
 }

@@ -1,4 +1,4 @@
-package com.example.techtest;
+package com.example.techtest.scheduler;
 
 import com.example.techtest.entity.Pricing;
 import com.example.techtest.service.PricingService;
@@ -16,24 +16,22 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.http.HttpResponse;
+
 import java.util.Iterator;
 
 @Configuration
 @EnableAsync
 @EnableScheduling
-public class Oracle {
+public class OracleScheduler {
 
     public static final String BINANCE_URL = "https://api.binance.com/api/v3/ticker/bookTicker";
     public static final String HUOBI_URL = "https://api.huobi.pro/market/tickers";
+
     @Autowired
     PricingService pricingService;
 
-    @Scheduled(initialDelay = 1000, fixedRate = 5000)
+    @Scheduled(initialDelay = 1000, fixedRate = 10000)
     public void pricingUpdate() {
-        long now = System.currentTimeMillis() / 1000;
-        System.out.println(
-                "Fixed rate task with one second initial delay - " + now);
 
         try {
             // Binance API
@@ -57,25 +55,12 @@ public class Oracle {
                 double huobiBidPrice = huobiBtcPriceData.get("bid").asDouble();
                 double huobiAskPrice = huobiBtcPriceData.get("ask").asDouble();
 
-                // Compare and print results
-                if (binanceBidPrice > huobiBidPrice) {
-                    System.out.println("Binance has the higher bid price: " + binanceBidPrice);
-                    bestBtcSellPrice = binanceBidPrice;
-                } else {
-                    System.out.println("Huobi has the higher bid price: " + huobiBidPrice);
-                    bestBtcSellPrice = huobiBidPrice;
-                }
+                bestBtcSellPrice = Math.max(binanceBidPrice, huobiBidPrice);
+                bestBtcBuyPrice = Math.min(binanceAskPrice, huobiAskPrice);
 
-                if (binanceAskPrice < huobiAskPrice) {
-                    System.out.println("Binance has the lower ask price: " + binanceAskPrice);
-                    bestBtcBuyPrice = binanceAskPrice;
-                } else {
-                    System.out.println("Huobi has the lower ask price: " + huobiAskPrice);
-                    bestBtcBuyPrice = huobiAskPrice;
-                }
             }
 
-            // Compare bid and ask prices for BTC
+            // Compare bid and ask prices for ETH
             if (binanceEthPriceData != null && huobiEthPriceData != null) {
                 double binanceBidPrice = binanceEthPriceData.get("bidPrice").asDouble();
                 double binanceAskPrice = binanceEthPriceData.get("askPrice").asDouble();
@@ -83,22 +68,9 @@ public class Oracle {
                 double huobiBidPrice = huobiEthPriceData.get("bid").asDouble();
                 double huobiAskPrice = huobiEthPriceData.get("ask").asDouble();
 
-                // Compare and print results
-                if (binanceBidPrice > huobiBidPrice) {
-                    System.out.println("Binance has the higher bid price: " + binanceBidPrice);
-                    bestEthSellPrice = binanceBidPrice;
-                } else {
-                    System.out.println("Huobi has the higher bid price: " + huobiBidPrice);
-                    bestEthSellPrice = huobiBidPrice;
-                }
+                bestEthSellPrice = Math.max(binanceBidPrice, huobiBidPrice);
+                bestEthBuyPrice = Math.min(binanceAskPrice, huobiAskPrice);
 
-                if (binanceAskPrice < huobiAskPrice) {
-                    System.out.println("Binance has the lower ask price: " + binanceAskPrice);
-                    bestEthBuyPrice = binanceAskPrice;
-                } else {
-                    System.out.println("Huobi has the lower ask price: " + huobiAskPrice);
-                    bestEthBuyPrice = huobiAskPrice;
-                }
             }
 
             Pricing price = new Pricing();
@@ -111,7 +83,6 @@ public class Oracle {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
 
     }
 
@@ -135,7 +106,7 @@ public class Oracle {
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode jsonNode = objectMapper.readTree(response.toString());
 
-            // Assuming the JSON structure is an array for Huobi
+            //JSON structure is an array for Huobi
             if (jsonNode.has("data") && jsonNode.get("data").isArray()) {
                 for (JsonNode element : jsonNode.get("data")) {
                     if (element.has("symbol") && element.get("symbol").asText().equalsIgnoreCase(symbol)) {

@@ -23,7 +23,7 @@ public class UserService {
     public double getUserFiatBalance(int userId){
         Account existingUser = userRepository.findById((long) userId)
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
-        return existingUser.getFiatBalance();
+        return existingUser.getUsdtBalance();
     }
 
     public double getUserEthBalance(int userId){
@@ -38,11 +38,11 @@ public class UserService {
         return existingUser.getBtcBalance();
     }
 
-    public boolean updateUserWallet(int userId, double fiatBalance, double ethBalance, double btcBalance) {
+    public boolean updateUserWallet(int userId, double usdtBalance, double ethBalance, double btcBalance) {
         Account existingUser = userRepository.findById((long) userId)
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
 
-        existingUser.setFiatBalance(fiatBalance);
+        existingUser.setUsdtBalance(usdtBalance);
         existingUser.setEthBalance(ethBalance);
         existingUser.setBtcBalance(btcBalance);
         userRepository.save(existingUser);
