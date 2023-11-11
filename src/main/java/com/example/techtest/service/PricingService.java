@@ -24,4 +24,23 @@ public class PricingService {
     public Pricing getLatestPrice() {
         return pricingRepository.findFirstByOrderByTimestampDesc();
     }
+
+    public double getLatestPriceByPairTypeAndTradeType(String pairType, String tradeType) {
+        // Implement your custom query logic
+        // This is just an example, you should adjust it based on your specific criteria
+        Pricing pricing = pricingRepository.findFirstByOrderByTimestampDesc();
+        if(pairType.equals("BTC") && tradeType.equals("B")){
+            return pricing.getBtcUsdtBuyPrice();
+        }
+        if(pairType.equals("BTC") && tradeType.equals("S")){
+            return pricing.getBtcUsdtSellPrice();
+        }
+        if(pairType.equals("ETH") && tradeType.equals("B")){
+            return pricing.getEthUsdtBuyPrice();
+        }
+        if(pairType.equals("ETH") && tradeType.equals("S")){
+            return pricing.getEthUsdtSellPrice();
+        }
+        return 0;
+   }
 }

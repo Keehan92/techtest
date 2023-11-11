@@ -10,7 +10,6 @@ public class Pricing {
 
     @Id
     @Column(name = "id", nullable = false)
-//    @GeneratedValue(strategy = GenerationType.AUTO)
     @GeneratedValue(strategy=GenerationType.SEQUENCE, generator="PROJECT_SEQ_GEN")
     @SequenceGenerator(name="PROJECT_SEQ_GEN", sequenceName="PROJECT_SEQ_GEN", allocationSize=1)
     private int id;

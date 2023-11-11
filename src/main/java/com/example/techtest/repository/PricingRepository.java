@@ -8,4 +8,5 @@ import org.springframework.stereotype.Repository;
 public interface PricingRepository extends JpaRepository<Pricing, Long> {
 
     Pricing findFirstByOrderByTimestampDesc();
+
 }
